@@ -306,7 +306,7 @@ class ClipboardManager(QMainWindow):
     def setup_ui(self):
         """Create user interface"""
         self.setWindowTitle(f"📋 {APP_NAME} v{APP_VERSION}")
-        self.setGeometry(150, 150, 1500, 900)  # Slightly larger but not fullscreen
+        self.setGeometry(150, 150, 1000, 700)  # Medium sized window
         
         central = QWidget()
         main_layout = QVBoxLayout()
@@ -397,6 +397,13 @@ class ClipboardManager(QMainWindow):
         cal_layout.addWidget(QLabel("📅 Pick Date"))
         self.calendar = QCalendarWidget()
         self.calendar.clicked.connect(self.on_date_selected)
+        
+        # Make Monday to Friday black text
+        weekday_fmt = QTextCharFormat()
+        weekday_fmt.setForeground(QColor("black"))
+        for day in [Qt.Monday, Qt.Tuesday, Qt.Wednesday, Qt.Thursday, Qt.Friday]:
+            self.calendar.setWeekdayTextFormat(day, weekday_fmt)
+            
         self.calendar.setStyleSheet(f"""
             QCalendarWidget {{ background-color: {THEME['bg_tertiary']}; }}
             QCalendarWidget QHeaderView::section {{ 
@@ -408,7 +415,6 @@ class ClipboardManager(QMainWindow):
             }}
             QCalendarWidget QTableView {{
                 background-color: {THEME['bg_tertiary']};
-                color: {THEME['fg_primary']};
                 gridline-color: #333;
                 selection-background-color: {THEME['accent_blue']};
             }}
