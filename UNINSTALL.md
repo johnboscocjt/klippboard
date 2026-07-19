@@ -1,27 +1,38 @@
 # 🗑️ Uninstall Guide
 
-## Complete Removal
+## Quick Uninstall (Recommended)
+
+From the cloned repo folder:
+
+```bash
+bash uninstall.sh
+```
+
+This removes the app, global command, virtual environment, desktop launcher
+and icon — but **keeps your clipboard history and env files**.
+
+To also delete all saved data:
+
+```bash
+bash uninstall.sh --purge
+```
+
+---
+
+## Manual Removal
 
 ### Step 1: Remove Global Command
 
 ```bash
-sudo rm /usr/local/bin/klippboard
+sudo rm -f /usr/local/bin/klippboard
 ```
 
 ### Step 2: Remove Alias (if added)
 
-Remove from `~/.bashrc`:
-```bash
-nano ~/.bashrc
-```
+Remove the KlippBoard lines from `~/.bashrc`:
 
-Find and delete this line:
 ```bash
-alias klippboard='/usr/local/bin/klippboard'
-```
-
-Then reload:
-```bash
+sed -i '/# KlippBoard/d;/alias klippboard=/d' ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -34,73 +45,58 @@ rm -rf ~/clipboard_env
 ### Step 4: Remove Application
 
 ```bash
-rm ~/clipboard_manager.py
+rm -f ~/clipboard_manager.py
+rm -f ~/klippboard.png
 ```
 
-### Step 5: Remove Desktop Shortcut
+### Step 5: Remove Desktop Launcher & Icon
 
 ```bash
-rm ~/.local/share/applications/klippboard.desktop
+rm -f ~/.local/share/applications/klippboard.desktop
+rm -f ~/.local/share/icons/klippboard.png
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+gtk-update-icon-cache ~/.local/share/icons 2>/dev/null || true
 ```
 
 ### Step 6: Remove Autostart (if enabled)
 
 ```bash
-rm ~/.config/autostart/klippboard.desktop
+rm -f ~/.config/autostart/klippboard.desktop
 ```
 
-### Step 7: Remove Systemd Service (if enabled)
+## Your Data
 
-```bash
-systemctl --user disable klippboard.service
-rm ~/.config/systemd/user/klippboard.service
+Clipboard history and env files are stored in:
+
 ```
-
-## Keep Data (Optional)
-
-Your clipboard history is stored in:
-```
-~/.clipboard_history.json
-~/.klippboard_config.json
+~/.clipboard_history.json        # clipboard history
+~/.klippboard_config.json        # settings (hotkey)
+~/.klippboard_env_config.json    # env manager settings
+~/.klippboard_env/               # your saved env files
 ```
 
 ### Keep Data for Reinstall
-If you want to reinstall later and keep your history:
-```bash
-# Do NOT delete these files
-```
+Leave the files above in place — they will be picked up automatically next time.
 
 ### Delete All Data
 ```bash
-rm ~/.clipboard_history.json
-rm ~/.klippboard_config.json
+rm -f ~/.clipboard_history.json ~/.klippboard_config.json ~/.klippboard_env_config.json
+rm -rf ~/.klippboard_env
 ```
 
 ## Verify Removal
 
-Check that everything is gone:
-
 ```bash
-which klippboard
-# Should show: command not found
-```
-
-```bash
-ls -la ~/clipboard_manager.py
-# Should show: No such file
-```
-
-```bash
-ls -la /usr/local/bin/klippboard
-# Should show: No such file
+which klippboard                 # should print nothing / "not found"
+ls ~/clipboard_manager.py        # should show: No such file
+ls /usr/local/bin/klippboard     # should show: No such file
 ```
 
 ## Need Help?
 
-If you have issues removing KlippBoard, check:
-- [INSTALLATION.md](INSTALLATION.md) for troubleshooting
-- [README.md](../README.md) for more info
+- [INSTALLATION.md](INSTALLATION.md) for setup and troubleshooting
+- [README.md](README.md) for more info
 
 ---
 
-Made with ❤️ by [johnboscocjt](https://github.com/johnboscocjt/klippboard)
+Made with love by [johnboscocjt](https://github.com/johnboscocjt/klippboard)

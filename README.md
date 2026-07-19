@@ -61,7 +61,14 @@ klippboard
 ### Manual Run
 
 ```bash
-python3 src/clipboard_manager.py
+python3 clipboard_manager.py
+```
+
+### Uninstall
+
+```bash
+bash uninstall.sh          # keep your data
+bash uninstall.sh --purge  # also delete history + env files
 ```
 
 ## 📋 How to Use
@@ -95,15 +102,10 @@ python3 src/clipboard_manager.py
 
 ## ⚙️ Configuration
 
-### Set Global Hotkey
-1. Click ⚙ button
-2. Enter your hotkey (e.g., `super+v`)
-3. Click OK - saved automatically
-
-### Common Examples
-- `ctrl+alt+v` - Default
-- `super+v` - Windows/Super key
-- `shift+alt+v` - Shift+Alt combo
+### Global Hotkey
+KlippBoard opens with **Ctrl+Alt+V** by default. If the hotkey does not respond,
+launch it once with `sudo klippboard` so it can register system-wide. The hotkey
+is stored in `~/.klippboard_config.json`.
 
 ## 🛠️ Technical Specs
 
@@ -116,10 +118,12 @@ python3 src/clipboard_manager.py
 
 ## 📦 Files
 
-- `src/clipboard_manager.py` - Main application
+- `clipboard_manager.py` - Main application
+- `klippboard.png` - App / launcher icon
 - `install.sh` - Automatic installer
-- `docs/INSTALLATION.md` - Setup guide
-- `docs/PRIVACY.md` - Privacy policy
+- `uninstall.sh` - Uninstaller (`--purge` to remove data)
+- `INSTALLATION.md` - Setup guide
+- `PRIVACY.md` - Privacy policy
 - `README.md` - This file
 - `LICENSE` - MIT License
 
@@ -137,7 +141,7 @@ See [PRIVACY.md](docs/PRIVACY.md) for details.
 
 ### Global hotkey not working
 ```bash
-sudo python3 src/clipboard_manager.py
+sudo python3 clipboard_manager.py
 ```
 
 ### ModuleNotFoundError: No module named 'PyQt5'

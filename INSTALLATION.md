@@ -10,11 +10,12 @@ klippboard
 ```
 
 The installer will:
-- ✅ Create Python virtual environment
+- ✅ Create a Python virtual environment
 - ✅ Install dependencies (PyQt5, keyboard)
 - ✅ Add global command `/usr/local/bin/klippboard`
-- ✅ Create desktop shortcut
-- ✅ Setup keyboard shortcut (Ctrl+Alt+V)
+- ✅ Install the app icon to `~/.local/share/icons/klippboard.png`
+- ✅ Create an Applications-menu launcher (with icon) so KlippBoard is easy to start
+- ✅ Enable the global hotkey (Ctrl+Alt+V)
 
 ## 🌐 Global Command Detection
 
@@ -35,13 +36,14 @@ The installer creates a global wrapper script at `/usr/local/bin/klippboard` tha
 
 Launch KlippBoard with the global hotkey (Ctrl+Alt+V)
 
-### Change Hotkey
+If the hotkey does not respond, run KlippBoard once with elevated
+permissions so it can register the shortcut system-wide:
 
-1. Launch KlippBoard: `klippboard`
-2. Click ⚙ button in header
-3. Enter new hotkey (examples: `super+v`, `ctrl+alt+c`, `shift+alt+v`)
-4. Click OK - saved automatically
-5. May need `sudo` for system-level access
+```bash
+sudo klippboard
+```
+
+The hotkey is stored in `~/.klippboard_config.json`.
 
 ## Manual Installation
 
@@ -76,11 +78,14 @@ source ~/clipboard_env/bin/activate
 pip install PyQt5 keyboard
 ```
 
-### 4. Copy Application
+### 4. Copy Application & Icon
 
 ```bash
 git clone https://github.com/johnboscocjt/klippboard.git
-cp klippboard/src/clipboard_manager.py ~/clipboard_manager.py
+cp klippboard/clipboard_manager.py ~/clipboard_manager.py
+cp klippboard/klippboard.png ~/klippboard.png
+mkdir -p ~/.local/share/icons
+cp klippboard/klippboard.png ~/.local/share/icons/klippboard.png
 chmod +x ~/clipboard_manager.py
 ```
 
@@ -100,9 +105,26 @@ Now you can launch from anywhere:
 klippboard
 ```
 
-### 6. Setup Keyboard Shortcut (Optional)
+### 6. Create the Applications Launcher (Optional)
 
-Add to `~/.bashrc` or use the ⚙ button in the app.
+```bash
+mkdir -p ~/.local/share/applications
+cat > ~/.local/share/applications/klippboard.desktop << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Version=1.0.0
+Name=KlippBoard
+Comment=Modern, local clipboard manager for Linux
+Exec=/usr/local/bin/klippboard
+Icon=/home/$USER/.local/share/icons/klippboard.png
+Terminal=false
+Categories=Utility;Accessories;
+StartupWMClass=KlippBoard
+DESKTOP
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+```
+
+KlippBoard will now appear in your Applications menu with its icon.
 
 ## 🐛 Troubleshooting
 
@@ -138,7 +160,14 @@ klippboard
 
 ## 🗑️ Uninstall
 
-See [UNINSTALL.md](../docs/UNINSTALL.md) for complete removal instructions.
+One command from the repo folder:
+
+```bash
+bash uninstall.sh          # keep your data
+bash uninstall.sh --purge  # also delete history + env files
+```
+
+See [UNINSTALL.md](UNINSTALL.md) for full manual removal steps.
 
 ---
 

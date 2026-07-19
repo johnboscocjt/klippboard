@@ -1,8 +1,31 @@
 #!/bin/bash
 # KlippBoard Auto-Installer v1.0.0
+set -e
 
 echo "📋 Installing KlippBoard v1.0.0..."
 echo ""
+
+# Resolve the directory this script lives in (so it works from anywhere)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Locate the application source (supports repo root or src/ layout)
+if [ -f "$SCRIPT_DIR/clipboard_manager.py" ]; then
+    APP_SRC="$SCRIPT_DIR/clipboard_manager.py"
+elif [ -f "$SCRIPT_DIR/src/clipboard_manager.py" ]; then
+    APP_SRC="$SCRIPT_DIR/src/clipboard_manager.py"
+else
+    echo "❌ Could not find clipboard_manager.py next to install.sh"
+    exit 1
+fi
+
+# Locate the icon
+if [ -f "$SCRIPT_DIR/klippboard.png" ]; then
+    ICON_SRC="$SCRIPT_DIR/klippboard.png"
+elif [ -f "$SCRIPT_DIR/src/klippboard.png" ]; then
+    ICON_SRC="$SCRIPT_DIR/src/klippboard.png"
+else
+    ICON_SRC=""
+fi
 
 # Create virtual environment
 echo "📦 Creating virtual environment..."
@@ -15,8 +38,21 @@ pip install --quiet PyQt5 keyboard 2>/dev/null || pip install PyQt5 keyboard
 
 # Copy app
 echo "📄 Copying application..."
-cp src/clipboard_manager.py ~/clipboard_manager.py
+cp "$APP_SRC" ~/clipboard_manager.py
 chmod +x ~/clipboard_manager.py
+
+# Install icon so the launcher and window can use it
+ICON_DEST="$HOME/.local/share/icons/klippboard.png"
+if [ -n "$ICON_SRC" ]; then
+    echo "🎨 Installing app icon..."
+    mkdir -p "$HOME/.local/share/icons"
+    cp "$ICON_SRC" "$ICON_DEST"
+    # Also drop a copy next to the app so it is always found at runtime
+    cp "$ICON_SRC" ~/klippboard.png
+else
+    echo "⚠️  Icon file not found; using a fallback icon."
+    ICON_DEST="klippboard"
+fi
 
 # Create global command wrapper
 echo "🌐 Setting up global command..."
@@ -36,48 +72,47 @@ if [ -f ~/.bashrc ]; then
     fi
 fi
 
-# Create desktop shortcut
+# Create desktop shortcut with the app icon
 echo "🎯 Creating desktop shortcut..."
 mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/klippboard.desktop << 'DESKTOP'
+cat > ~/.local/share/applications/klippboard.desktop << DESKTOP
 [Desktop Entry]
 Type=Application
+Version=1.0.0
 Name=KlippBoard
-Comment=Modern clipboard manager for Linux
+GenericName=Clipboard Manager
+Comment=Modern, local clipboard manager for Linux
 Exec=/usr/local/bin/klippboard
-Icon=document-properties
+Icon=$ICON_DEST
 Terminal=false
 Categories=Utility;Accessories;
-Keywords=clipboard;manager;history;
+Keywords=clipboard;manager;history;copy;paste;
 StartupNotify=true
+StartupWMClass=KlippBoard
 DESKTOP
+chmod +x ~/.local/share/applications/klippboard.desktop
 
-# Create keyboard shortcut setup (optional)
+# Refresh desktop + icon caches so it appears immediately
+update-desktop-database ~/.local/share/applications 2>/dev/null || true
+gtk-update-icon-cache ~/.local/share/icons 2>/dev/null || true
+
 echo ""
-echo "⌨️  Keyboard Shortcut Setup (Optional)"
+echo "⌨️  Global Hotkey"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "KlippBoard opens with Ctrl+Alt+V."
+echo "If the hotkey does not respond, run 'sudo klippboard' once"
+echo "so it can register the shortcut system-wide."
 echo ""
-echo "KlippBoard is set to launch with Ctrl+Alt+V (configurable in app)"
-echo ""
-echo "To configure hotkey:"
-echo "  1. Launch: klippboard"
-echo "  2. Click ⚙ button"
-echo "  3. Enter hotkey (e.g., super+v)"
-echo "  4. Click OK"
-echo ""
-
-# Source bashrc
-source ~/.bashrc
 
 echo "✅ Installation Complete!"
 echo ""
 echo "🚀 Launch KlippBoard with:"
 echo "   klippboard"
 echo ""
-echo "Or from Applications menu: KlippBoard"
+echo "Or find 'KlippBoard' in your Applications menu."
 echo ""
 echo "Documentation:"
-echo "  📖 Help tab in app (❓ button)"
+echo "  📖 Help tab inside the app"
 echo "  📄 docs/INSTALLATION.md"
 echo "  🔐 docs/PRIVACY.md"
 echo ""
