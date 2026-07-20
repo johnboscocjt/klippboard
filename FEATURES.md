@@ -69,9 +69,10 @@ Open with the **Env** button in the header:
 | **Calendar** | Browse by date |
 | **Help** | Built-in docs |
 
-## Shortcuts & Tray
+## Launch & Tray
 
-- **Ctrl+Alt+V** — show KlippBoard from anywhere (default)
+- Launch from Applications menu or `klippboard` in a terminal
+- Set your own keyboard shortcut in desktop Settings (see [INSTALLATION.md](INSTALLATION.md))
 - Double-click tray icon — show / hide
 - Right-click tray — Show or Quit
 - Closing the window minimizes to tray (keeps capturing)
@@ -118,7 +119,7 @@ See [INSTALLATION.md](INSTALLATION.md) and [UNINSTALL.md](UNINSTALL.md) for deta
 |--|--|
 | Language | Python 3.7+ |
 | Framework | PyQt5 |
-| Optional | `keyboard` (global hotkey) |
+| Dependencies | PyQt5 |
 | Memory | ~50–70 MB |
 | Startup | &lt; 2 seconds |
 | License | MIT |

@@ -34,7 +34,7 @@ source ~/clipboard_env/bin/activate
 
 # Install dependencies
 echo "📥 Installing dependencies..."
-pip install --quiet PyQt5 keyboard 2>/dev/null || pip install PyQt5 keyboard
+pip install --quiet PyQt5 2>/dev/null || pip install PyQt5
 
 # Copy app
 echo "📄 Copying application..."
@@ -97,13 +97,6 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 gtk-update-icon-cache ~/.local/share/icons 2>/dev/null || true
 
 echo ""
-echo "⌨️  Global Hotkey"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "KlippBoard opens with Ctrl+Alt+V."
-echo "If the hotkey does not respond, run 'sudo klippboard' once"
-echo "so it can register the shortcut system-wide."
-echo ""
-
 echo "✅ Installation Complete!"
 echo ""
 echo "🚀 Launch KlippBoard with:"
@@ -111,9 +104,14 @@ echo "   klippboard"
 echo ""
 echo "Or find 'KlippBoard' in your Applications menu."
 echo ""
-echo "Documentation:"
-echo "  📖 Help tab inside the app"
-echo "  📄 docs/INSTALLATION.md"
-echo "  🔐 docs/PRIVACY.md"
+echo "⌨️  Optional: add a keyboard shortcut"
+echo "   Settings → Keyboard → Custom Shortcuts"
+echo "   Name: KlippBoard   Command: klippboard"
+echo "   See INSTALLATION.md for GNOME / KDE / XFCE steps."
 echo ""
-echo "Happy copying! 📋✨"
+echo "Documentation:"
+echo "  Help tab inside the app"
+echo "  INSTALLATION.md"
+echo "  PRIVACY.md"
+echo ""
+echo "Happy copying!"

@@ -1,55 +1,41 @@
-# 📋 KlippBoard v1.0.0
+# KlippBoard v1.0.0
 
-**A modern, ultra-fast clipboard manager for Linux with global hotkeys, line numbers, date filtering, and a beautiful dark theme.**
+**A modern, local clipboard manager for Linux** — history, favorites, calendar browse, env-file sync, and a clean dark UI.
 
-> Made with ❤️ by [johnboscocjt](https://github.com/johnboscocjt/)
+> Made with love by [johnboscocjt](https://github.com/johnboscocjt/)
 
 [![Python 3.7+](https://img.shields.io/badge/Python-3.7%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ✨ Key Features
+## Key Features
 
-### 📋 Complete Clipboard Management
+### Clipboard Management
 - Real-time clipboard monitoring
-- 100-item history (configurable)
-- Persistent JSON storage
+- 100-item history
+- Persistent local JSON storage
 - Fast search and filtering
-- 5-tab interface for organization
+- 5-tab interface (All · Favorites · Today · Calendar · Help)
 
-### ⚡ Quick Actions
-- **📋 Copy** - One-click copy to clipboard
-- **👁️ View** - Open in editor with line numbers
-- **🗑️ Delete** - Remove items
-- **⭐ Star** - Toggle favorites (★ filled / ☆ empty)
+### Quick Actions
+- **Copy** — one-click copy back to clipboard
+- **View** — open in editor with line numbers
+- **Delete** — remove items
+- **Favorite** — star clips you reuse often
 
-### 📑 Organized Tabs
-- **📋 All Items** - Complete history with search
-- **⭐ Favorites** - Protected starred items
-- **📍 Today** - Today's items only
-- **🗓 Calendar** - Pick any date with collapsible calendar
-- **❓ Help** - Built-in documentation
+### Interface
+- Dark-minimal theme
+- Line numbers + character/line count in the editor
+- Quiet toast feedback (no popup spam)
+- App icon on window, tray, and Applications menu
 
-### 🎨 Modern Interface
-- Dark theme (easy on eyes)
-- Glass morphism design
-- Smooth animations
-- Line numbers in editor
-- Character & line count display
-
-### ⌨️ Global Hotkey
-- Default: `Ctrl+Alt+V`
-- Fully configurable
-- Launch from anywhere
-
-### 🔐 Privacy First
+### Privacy First
 - 100% local (no cloud)
 - No tracking/telemetry
 - Open source (MIT License)
-- Your data, your control
 
-## 🚀 Quick Start
+## Quick Start
 
-### Installation
+### Install
 
 ```bash
 git clone https://github.com/johnboscocjt/klippboard.git
@@ -58,7 +44,21 @@ bash install.sh
 klippboard
 ```
 
-### Manual Run
+### Set a keyboard shortcut (recommended)
+
+KlippBoard does not register a hotkey by itself. Add one in your desktop settings:
+
+1. Open **Settings → Keyboard → Custom Shortcuts** (GNOME)  
+   or the equivalent on KDE / XFCE / Cinnamon
+2. Add a new shortcut:
+   - **Name:** KlippBoard  
+   - **Command:** `klippboard`  
+   - **Keys:** e.g. `Ctrl+Alt+V`
+3. Save — press that combo anytime to open KlippBoard
+
+Full steps for each desktop: [INSTALLATION.md](INSTALLATION.md#set-a-keyboard-shortcut-manual)
+
+### Manual run
 
 ```bash
 python3 clipboard_manager.py
@@ -71,97 +71,85 @@ bash uninstall.sh          # keep your data
 bash uninstall.sh --purge  # also delete history + env files
 ```
 
-## 📋 How to Use
+## How to Use
 
-### Select & Manage Items
-- Click checkbox to select items
-- **☑ Select All** - Select everything
-- **📋 Copy** - Copy selected items
-- **⭐ Star** - Star selected items
-- **🗑️ Delete** - Delete selected items
-- **⚠️ Clear All** - Delete all (double confirmation)
+### Select & manage items
+- Click the checkbox to select items
+- **Select All** — select everything in the current tab
+- **Copy Selected** — copy checked items together
+- **Export** — save history to a `.txt` file
+- **Clear All** — delete everything (double confirmation)
 
-### View & Edit
-- Click **👁️** to open editor
-- View line numbers on left
-- See character & line count
-- Fullscreen toggle available
+### View & edit
+- Click **View** to open the editor
+- Line numbers on the left
+- Character & line count in the header
 - Save changes back to history
 
-### Search & Filter
-- Search in All Items tab
-- Search in selected date
-- Live filtering
-- Case-insensitive
+### Search & filter
+- Search in the All tab
+- Search within a selected calendar date
+- Live, case-insensitive filtering
 
-### Calendar Features
-- Collapsible calendar on left
-- Click dates to view items
-- Search within selected date
-- Large viewing area
+### Calendar
+- Pick a date on the left
+- See that day's clips on the right
+- Filter within the selected date
 
-## ⚙️ Configuration
-
-### Global Hotkey
-KlippBoard opens with **Ctrl+Alt+V** by default. If the hotkey does not respond,
-launch it once with `sudo klippboard` so it can register system-wide. The hotkey
-is stored in `~/.klippboard_config.json`.
-
-## 🛠️ Technical Specs
+## Technical Specs
 
 - **Language**: Python 3.7+
 - **Framework**: PyQt5
-- **Dependencies**: PyQt5, keyboard (optional)
-- **Memory**: ~50-70MB
-- **Startup**: <2 seconds
+- **Dependencies**: PyQt5
+- **Memory**: ~50–70 MB
+- **Startup**: &lt; 2 seconds
 - **License**: MIT
 
-## 📦 Files
+## Files
 
-- `clipboard_manager.py` - Main application
-- `klippboard.png` - App / launcher icon
-- `install.sh` - Automatic installer
-- `uninstall.sh` - Uninstaller (`--purge` to remove data)
-- `INSTALLATION.md` - Setup guide
-- `PRIVACY.md` - Privacy policy
-- `README.md` - This file
-- `LICENSE` - MIT License
+- `clipboard_manager.py` — main application
+- `klippboard.png` — app / launcher / tray icon
+- `install.sh` — installer
+- `uninstall.sh` — uninstaller (`--purge` to remove data)
+- `INSTALLATION.md` — setup + keyboard shortcut guide
+- `UNINSTALL.md` — removal guide
+- `FEATURES.md` — full feature list
+- `PRIVACY.md` — privacy policy
+- `README.md` — this file
+- `LICENSE` — MIT License
 
-## 🔐 Privacy
+## Privacy
 
-✅ **100% Local** - All data stored locally in `~/.clipboard_history.json`
-✅ **No Cloud** - Never connects to internet
-✅ **No Tracking** - Zero telemetry
-✅ **Open Source** - Full source code available
-✅ **MIT License** - Free to use and modify
+- **100% Local** — data in `~/.clipboard_history.json`
+- **No Cloud** — never phones home
+- **No Tracking** — zero telemetry
+- **Open Source** — full source available
 
-See [PRIVACY.md](docs/PRIVACY.md) for details.
+See [PRIVACY.md](PRIVACY.md) for details.
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Global hotkey not working
+### `command not found: klippboard`
 ```bash
-sudo python3 clipboard_manager.py
+source ~/.bashrc
+which klippboard
 ```
+Re-run `bash install.sh` if the command is missing.
 
-### ModuleNotFoundError: No module named 'PyQt5'
-```bash
-pip install PyQt5 keyboard
-```
+### Keyboard shortcut does nothing
+- Confirm `klippboard` works in a terminal first
+- In your custom shortcut, set Command to `klippboard` (or `/usr/local/bin/klippboard`)
+- Pick a key combo that is not already used
 
-### More help
-- Check [INSTALLATION.md](docs/INSTALLATION.md)
-- Read [PRIVACY.md](docs/PRIVACY.md)
-- See ❓ Help tab in app
+More help:
+- [INSTALLATION.md](INSTALLATION.md)
+- [PRIVACY.md](PRIVACY.md)
+- Help tab inside the app
 
-## 📄 License
+## License
 
-MIT License - See [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
-## 👤 Author
+## Author
 
-**johnboscocjt** - [GitHub](https://github.com/johnboscocjt/)
-
----
-
-**Enjoy managing your clipboard with style!** 🚀
+**johnboscocjt** — [GitHub](https://github.com/johnboscocjt/)

@@ -67,13 +67,7 @@ Your clipboard:
 - GUI framework
 - Renders interface locally
 - No data collection
-
-### keyboard
-- Detects hotkey press
-- Runs locally
-- No tracking
-
-Both are open source and auditable.
+- Open source and auditable
 
 ## Best Practices
 

@@ -20,12 +20,6 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QDate, QRect, QTimer
 from PyQt5.QtGui import QFont, QColor, QPainter, QTextFormat, QIcon
 
-try:
-    import keyboard
-    KEYBOARD_AVAILABLE = True
-except ImportError:
-    KEYBOARD_AVAILABLE = False
-
 APP_VERSION = "1.0.0"
 APP_NAME = "KlippBoard"
 REPO_URL = "https://github.com/johnboscocjt/klippboard"
@@ -1117,14 +1111,12 @@ class ClipboardManager(QMainWindow):
         self.config_file = os.path.expanduser("~/.klippboard_config.json")
         self.history = []
         self.selected_items = set()
-        self.hotkey = "ctrl+alt+v"
         self.max_items = 100
 
         self.load_data()
         self.setup_ui()
         self.setup_tray()
         self.setup_monitoring()
-        self.setup_hotkey()
         self.apply_theme()
 
     # ---- UI construction ----
@@ -1467,7 +1459,7 @@ class ClipboardManager(QMainWindow):
             <b style="color:{THEME['text_primary']}">Quick start</b>
             <p style="margin-top:8px">
             <b>1.</b> Copy anything (<span class="kbd">Ctrl</span> + <span class="kbd">C</span>) — it lands in <b>All</b> automatically<br>
-            <b>2.</b> Reopen the window anytime with <span class="kbd">Ctrl</span> + <span class="kbd">Alt</span> + <span class="kbd">V</span><br>
+            <b>2.</b> Open KlippBoard from the Applications menu, the tray, or a shortcut you set yourself<br>
             <b>3.</b> Click <b>Copy</b> on any item to paste it back into your work<br>
             <b>4.</b> Star (<b>☆</b>) the clips you reuse, and search to find anything fast</p>
         </div>
@@ -1520,9 +1512,10 @@ class ClipboardManager(QMainWindow):
         </ul>
         <p class="muted">Requires <code>git</code> installed and access to the repo you configure.</p>
 
-        <h2>Shortcuts &amp; behavior</h2>
+        <h2>Launch &amp; tray</h2>
         <ul>
-            <li><span class="kbd">Ctrl</span> + <span class="kbd">Alt</span> + <span class="kbd">V</span> — show KlippBoard from anywhere</li>
+            <li>Open from the Applications menu or run <code>klippboard</code> in a terminal</li>
+            <li>Add your own keyboard shortcut in desktop Settings (see tip below)</li>
             <li>Double-click the tray icon — show / hide the window</li>
             <li>Right-click the tray icon — Show or Quit</li>
             <li>Closing the window minimizes to the tray (KlippBoard keeps capturing)</li>
@@ -1532,8 +1525,10 @@ class ClipboardManager(QMainWindow):
         <h2>Tips</h2>
         <ul>
             <li>History keeps your most recent 100 items automatically.</li>
-            <li>If the global hotkey doesn't work, launch with <code>sudo klippboard</code> once
-                so it can register system-wide.</li>
+            <li>To open KlippBoard with a key combo: open
+                <b>Settings → Keyboard → Custom Shortcuts</b>, add a shortcut named
+                KlippBoard with command <code>klippboard</code>, and choose your keys
+                (e.g. Ctrl+Alt+V). Full steps are in INSTALLATION.md.</li>
             <li>Star clips you paste often — they stay in <b>Favorites</b> even as history rolls over.</li>
         </ul>
 
@@ -1614,8 +1609,7 @@ class ClipboardManager(QMainWindow):
         try:
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r') as f:
-                    cfg = json.load(f)
-                    self.hotkey = cfg.get('hotkey', 'ctrl+alt+v')
+                    json.load(f)
         except Exception:
             pass
 
@@ -1623,25 +1617,12 @@ class ClipboardManager(QMainWindow):
         with open(self.history_file, 'w') as f:
             json.dump(self.history[:self.max_items], f, indent=2)
         with open(self.config_file, 'w') as f:
-            json.dump({'hotkey': self.hotkey}, f)
+            json.dump({}, f)
 
     def setup_monitoring(self):
         self.monitor = ClipboardMonitor()
         self.monitor.clipboard_changed.connect(self.on_clipboard_changed)
         self.monitor.start()
-
-    def setup_hotkey(self):
-        if not KEYBOARD_AVAILABLE:
-            return
-        try:
-            keyboard.add_hotkey(self.hotkey, self._hotkey_show)
-        except Exception:
-            pass
-
-    def _hotkey_show(self):
-        self.show()
-        self.raise_()
-        self.activateWindow()
 
     # ---- History management ----
     def on_clipboard_changed(self, content):

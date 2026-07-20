@@ -1,6 +1,6 @@
-# 📦 Installation Guide (2026)
+# Installation Guide
 
-## ⚡ Quick Install (Recommended)
+## Quick Install (Recommended)
 
 ```bash
 git clone https://github.com/johnboscocjt/klippboard.git
@@ -10,40 +10,56 @@ klippboard
 ```
 
 The installer will:
-- ✅ Create a Python virtual environment
-- ✅ Install dependencies (PyQt5, keyboard)
-- ✅ Add global command `/usr/local/bin/klippboard`
-- ✅ Install the app icon to `~/.local/share/icons/klippboard.png`
-- ✅ Create an Applications-menu launcher (with icon) so KlippBoard is easy to start
-- ✅ Enable the global hotkey (Ctrl+Alt+V)
+- Create a Python virtual environment
+- Install dependencies (PyQt5)
+- Add the `klippboard` command at `/usr/local/bin/klippboard`
+- Install the app icon to `~/.local/share/icons/klippboard.png`
+- Create an Applications-menu launcher (with icon)
 
-## 🌐 Global Command Detection
+After install you can launch from:
+- Terminal: `klippboard`
+- Applications menu: **KlippBoard**
 
-After installation, KlippBoard is available globally:
+---
 
-```bash
-# From anywhere, launch with:
-klippboard
+## Set a Keyboard Shortcut (Manual)
 
-# Or use Applications menu: KlippBoard
-```
+KlippBoard does **not** install its own system-wide hotkey.  
+Add a shortcut yourself in your desktop settings so a key combo launches `klippboard`.
 
-The installer creates a global wrapper script at `/usr/local/bin/klippboard` that is accessible from any terminal.
+### GNOME (Ubuntu, Fedora Workstation, Pop!_OS, …)
 
-## ⌨️ Keyboard Shortcut Setup
+1. Open **Settings → Keyboard → View and Customize Shortcuts**
+2. Scroll to **Custom Shortcuts** → click **+**
+3. Fill in:
+   - **Name:** `KlippBoard`
+   - **Command:** `klippboard`
+   - **Shortcut:** press your preferred keys (e.g. `Ctrl+Alt+V`)
+4. Click **Add**
 
-### Default Hotkey: Ctrl+Alt+V
+### KDE Plasma
 
-Launch KlippBoard with the global hotkey (Ctrl+Alt+V)
+1. Open **System Settings → Shortcuts → Custom Shortcuts**
+2. **Edit → New → Global Shortcut → Command/URL**
+3. Name it `KlippBoard`
+4. Under **Trigger**, set your key combo
+5. Under **Action**, set Command to `klippboard`
+6. Apply
 
-If the hotkey does not respond, run KlippBoard once with elevated
-permissions so it can register the shortcut system-wide:
+### XFCE
 
-```bash
-sudo klippboard
-```
+1. Open **Settings → Keyboard → Application Shortcuts**
+2. Click **Add**
+3. Command: `klippboard`
+4. Press the keys you want when prompted
 
-The hotkey is stored in `~/.klippboard_config.json`.
+### Cinnamon / MATE / Budgie
+
+Use **Keyboard → Shortcuts → Custom** (wording varies slightly) and add a shortcut that runs `klippboard`.
+
+Tip: pick a combo that is not already used by your desktop (e.g. `Ctrl+Alt+V` or `Super+V`).
+
+---
 
 ## Manual Installation
 
@@ -75,7 +91,7 @@ source ~/clipboard_env/bin/activate
 ### 3. Install Dependencies
 
 ```bash
-pip install PyQt5 keyboard
+pip install PyQt5
 ```
 
 ### 4. Copy Application & Icon
@@ -89,7 +105,7 @@ cp klippboard/klippboard.png ~/.local/share/icons/klippboard.png
 chmod +x ~/clipboard_manager.py
 ```
 
-### 5. Create Global Command (Optional)
+### 5. Create the `klippboard` Command (Optional)
 
 ```bash
 sudo tee /usr/local/bin/klippboard > /dev/null << 'EOF'
@@ -100,7 +116,7 @@ EOF
 sudo chmod +x /usr/local/bin/klippboard
 ```
 
-Now you can launch from anywhere:
+Then launch with:
 ```bash
 klippboard
 ```
@@ -109,14 +125,14 @@ klippboard
 
 ```bash
 mkdir -p ~/.local/share/applications
-cat > ~/.local/share/applications/klippboard.desktop << 'DESKTOP'
+cat > ~/.local/share/applications/klippboard.desktop << DESKTOP
 [Desktop Entry]
 Type=Application
 Version=1.0.0
 Name=KlippBoard
 Comment=Modern, local clipboard manager for Linux
 Exec=/usr/local/bin/klippboard
-Icon=/home/$USER/.local/share/icons/klippboard.png
+Icon=$HOME/.local/share/icons/klippboard.png
 Terminal=false
 Categories=Utility;Accessories;
 StartupWMClass=KlippBoard
@@ -124,43 +140,38 @@ DESKTOP
 update-desktop-database ~/.local/share/applications 2>/dev/null || true
 ```
 
-KlippBoard will now appear in your Applications menu with its icon.
+Then set a keyboard shortcut as described above.
 
-## 🐛 Troubleshooting
+---
 
-### "command not found: klippboard"
+## Troubleshooting
+
+### `command not found: klippboard`
+
 ```bash
 source ~/.bashrc
-# Or check if global command exists:
-which klippboard
-```
-
-### Global hotkey not working
-```bash
-# Try running with sudo:
-sudo klippboard
-```
-
-### "ModuleNotFoundError: No module named 'PyQt5'"
-```bash
-source ~/clipboard_env/bin/activate
-pip install PyQt5
-```
-
-## ✅ Verify Installation
-
-Check that global command is available:
-```bash
 which klippboard
 # Should show: /usr/local/bin/klippboard
+```
 
-# Test launching:
+If it is missing, re-run `bash install.sh` from the repo folder.
+
+### Shortcut does nothing
+
+- Confirm `klippboard` works from a terminal first
+- Make sure the custom shortcut Command is exactly `klippboard` (or `/usr/local/bin/klippboard`)
+- Check that the key combo is not already taken by another app
+
+## Verify Installation
+
+```bash
+which klippboard
+# /usr/local/bin/klippboard
+
 klippboard
 ```
 
-## 🗑️ Uninstall
-
-One command from the repo folder:
+## Uninstall
 
 ```bash
 bash uninstall.sh          # keep your data
@@ -171,6 +182,4 @@ See [UNINSTALL.md](UNINSTALL.md) for full manual removal steps.
 
 ---
 
-For more help, see README.md and PRIVACY.md
-
-Copyright © 2026
+For more help, see [README.md](README.md) and [PRIVACY.md](PRIVACY.md)

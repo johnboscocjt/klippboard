@@ -70,7 +70,7 @@ Clipboard history and env files are stored in:
 
 ```
 ~/.clipboard_history.json        # clipboard history
-~/.klippboard_config.json        # settings (hotkey)
+~/.klippboard_config.json        # app settings
 ~/.klippboard_env_config.json    # env manager settings
 ~/.klippboard_env/               # your saved env files
 ```
