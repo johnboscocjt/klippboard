@@ -29,10 +29,15 @@ echo "• Removing launcher and icon..."
 rm -f ~/.local/share/applications/klippboard.desktop
 rm -f ~/.local/share/icons/klippboard.png
 rm -f ~/.config/autostart/klippboard.desktop
+# Remove hicolor theme icons
+for s in 16 24 32 48 64 128 256 512; do
+    rm -f ~/.local/share/icons/hicolor/${s}x${s}/apps/klippboard.png
+done
 
 # Refresh caches so it disappears from the menu
 update-desktop-database ~/.local/share/applications 2>/dev/null || true
-gtk-update-icon-cache ~/.local/share/icons 2>/dev/null || true
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor 2>/dev/null || true
+gtk-update-icon-cache -f -t ~/.local/share/icons 2>/dev/null || true
 
 # Remove bashrc alias
 if [ -f ~/.bashrc ]; then

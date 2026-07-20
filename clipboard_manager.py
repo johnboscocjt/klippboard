@@ -15,24 +15,28 @@ from PyQt5.QtWidgets import (
     QListWidget, QListWidgetItem, QPushButton, QLabel, QLineEdit,
     QDialog, QMessageBox, QMenu, QSystemTrayIcon, QStyle,
     QFrame, QCalendarWidget, QCheckBox, QTextBrowser, QStackedWidget,
-    QInputDialog, QPlainTextEdit, QSizePolicy, QAbstractItemView, QTextEdit
+    QInputDialog, QPlainTextEdit, QSizePolicy, QAbstractItemView, QTextEdit,
+    QButtonGroup
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QDate, QRect, QTimer
-from PyQt5.QtGui import QFont, QColor, QPainter, QTextFormat, QIcon
+from PyQt5.QtGui import QFont, QColor, QPainter, QTextFormat, QIcon, QPixmap
 
 APP_VERSION = "1.0.0"
 APP_NAME = "KlippBoard"
 REPO_URL = "https://github.com/johnboscocjt/klippboard"
+DESKTOP_FILE_ID = "klippboard"
 
 
 def resolve_icon_path():
     """Find the app icon across dev and installed locations."""
     candidates = [
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "klippboard.png"),
+        os.path.expanduser("~/.local/share/icons/hicolor/512x512/apps/klippboard.png"),
+        os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps/klippboard.png"),
         os.path.expanduser("~/.local/share/icons/klippboard.png"),
-        os.path.expanduser("~/.klippboard.png"),
-        "/usr/local/share/icons/klippboard.png",
-        "/usr/share/icons/klippboard.png",
+        os.path.expanduser("~/klippboard.png"),
+        "/usr/local/share/icons/hicolor/512x512/apps/klippboard.png",
+        "/usr/share/icons/hicolor/512x512/apps/klippboard.png",
     ]
     for path in candidates:
         if os.path.exists(path):
@@ -40,7 +44,22 @@ def resolve_icon_path():
     return ""
 
 
+def load_app_icon():
+    """Build a multi-size QIcon so the taskbar/dock can pick a sharp glyph."""
+    path = resolve_icon_path()
+    if not path:
+        return QIcon()
+    icon = QIcon()
+    base = QPixmap(path)
+    if base.isNull():
+        return QIcon(path)
+    for size in (16, 24, 32, 48, 64, 128, 256, 512):
+        icon.addPixmap(base.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+    return icon
+
+
 ICON_PATH = resolve_icon_path()
+APP_ICON = None  # filled after QApplication exists
 
 # ---------------------------------------------------------------------------
 # Dark-minimal design system
@@ -1112,18 +1131,28 @@ class ClipboardManager(QMainWindow):
         self.history = []
         self.selected_items = set()
         self.max_items = 100
+        # Rebuild lists only when data changed (keeps tab switches instant)
+        self._dirty = {"all": True, "fav": True, "today": True, "date": True}
+        self._date_timer = QTimer(self)
+        self._date_timer.setSingleShot(True)
+        self._date_timer.timeout.connect(self._apply_pending_date)
+        self._pending_date = None
 
         self.load_data()
         self.setup_ui()
         self.setup_tray()
         self.setup_monitoring()
         self.apply_theme()
+        # Only build the visible list at startup; others wait until first open
+        self.populate_all_items()
+        self.update_stats()
 
     # ---- UI construction ----
     def setup_ui(self):
-        self.setWindowTitle(f"{APP_NAME}")
-        if ICON_PATH:
-            self.setWindowIcon(QIcon(ICON_PATH))
+        self.setWindowTitle(APP_NAME)
+        icon = APP_ICON or load_app_icon()
+        if not icon.isNull():
+            self.setWindowIcon(icon)
         self.setGeometry(120, 100, 1080, 720)
         self.setMinimumSize(780, 520)
 
@@ -1174,14 +1203,17 @@ class ClipboardManager(QMainWindow):
 
         # Nav tabs
         self.tab_buttons = []
+        self.tab_group = QButtonGroup(self)
+        self.tab_group.setExclusive(True)
         nav = QHBoxLayout()
         nav.setSpacing(4)
         tabs = ["All", "Favorites", "Today", "Calendar", "Help"]
         for i, text in enumerate(tabs):
             btn = TabButton(text)
-            btn.clicked.connect(lambda checked, idx=i: self.switch_tab(idx))
+            self.tab_group.addButton(btn, i)
             self.tab_buttons.append(btn)
             nav.addWidget(btn)
+        self.tab_group.buttonClicked.connect(self._on_tab_button)
         nav.addStretch()
         main.addLayout(nav)
 
@@ -1232,9 +1264,6 @@ class ClipboardManager(QMainWindow):
 
         main.addLayout(toolbar)
         self.setCentralWidget(central)
-        self.populate_all_items()
-        self.populate_favorites()
-        self.populate_today()
 
     def open_env_manager(self):
         EnvDialog(self).exec_()
@@ -1312,6 +1341,8 @@ class ClipboardManager(QMainWindow):
         self.calendar = QCalendarWidget()
         self.calendar.clicked.connect(self.on_date_selected)
         self.calendar.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
+        self.calendar.setGridVisible(False)
+        self.calendar.setNavigationBarVisible(True)
         self.calendar.setStyleSheet(f"""
             QCalendarWidget {{
                 background: transparent;
@@ -1550,22 +1581,26 @@ class ClipboardManager(QMainWindow):
         layout.addWidget(help_text)
         return page
 
+    def _on_tab_button(self, button):
+        self.switch_tab(self.tab_group.id(button))
+
     def switch_tab(self, index):
-        for btn in self.tab_buttons:
-            btn.setChecked(False)
-        self.tab_buttons[index].setChecked(True)
+        # Pane first for instant feedback; rebuild only if that list is stale
+        if 0 <= index < len(self.tab_buttons):
+            self.tab_buttons[index].setChecked(True)
         self.content_area.setCurrentIndex(index)
-        if index == 1:
+        if index == 0 and self._dirty.get("all"):
+            self.populate_all_items()
+        elif index == 1 and self._dirty.get("fav"):
             self.populate_favorites()
-        elif index == 2:
+        elif index == 2 and self._dirty.get("today"):
             self.populate_today()
 
     # ---- Tray / theme / data ----
     def setup_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
-        if ICON_PATH:
-            icon = QIcon(ICON_PATH)
-        else:
+        icon = APP_ICON or load_app_icon()
+        if icon.isNull():
             style = self.style()
             icon = style.standardIcon(QStyle.SP_ComputerIcon)
             if icon.isNull():
@@ -1634,10 +1669,23 @@ class ClipboardManager(QMainWindow):
             'favorite': False
         })
         self.save_data()
-        self.populate_all_items()
-        self.populate_favorites()
-        self.populate_today()
+        self.mark_lists_dirty()
+        self.refresh_visible_list()
         self.update_stats()
+
+    def mark_lists_dirty(self):
+        self._dirty = {"all": True, "fav": True, "today": True, "date": True}
+
+    def refresh_visible_list(self):
+        idx = self.content_area.currentIndex()
+        if idx == 0:
+            self.populate_all_items()
+        elif idx == 1:
+            self.populate_favorites()
+        elif idx == 2:
+            self.populate_today()
+        elif idx == 3 and self._pending_date is not None:
+            self._fill_date_list(self._pending_date)
 
     def add_item_widget(self, list_widget, item, idx):
         content = item.get('content', '')
@@ -1652,8 +1700,7 @@ class ClipboardManager(QMainWindow):
         widget.checkbox.stateChanged.connect(lambda s, c=content: self.toggle_select(c, s))
 
         list_item = QListWidgetItem()
-        hint = widget.sizeHint()
-        list_item.setSizeHint(QSize(list_widget.viewport().width() or 400, hint.height()))
+        list_item.setSizeHint(QSize(400, 78))
         list_widget.addItem(list_item)
         list_widget.setItemWidget(list_item, widget)
 
@@ -1661,22 +1708,45 @@ class ClipboardManager(QMainWindow):
         list_widget.setVisible(count > 0)
         empty_widget.setVisible(count == 0)
 
+    def _fill_list(self, list_widget, empty_widget, items, dirty_key):
+        list_widget.setUpdatesEnabled(False)
+        list_widget.blockSignals(True)
+        try:
+            list_widget.clear()
+            for idx, item in enumerate(items, 1):
+                self.add_item_widget(list_widget, item, idx)
+        finally:
+            list_widget.blockSignals(False)
+            list_widget.setUpdatesEnabled(True)
+        self._set_list_empty(list_widget, empty_widget, len(items))
+        self._dirty[dirty_key] = False
+
     def populate_all_items(self):
-        self.all_list.clear()
-        for idx, item in enumerate(self.history, 1):
-            self.add_item_widget(self.all_list, item, idx)
-        self._set_list_empty(self.all_list, self.all_empty, len(self.history))
+        query = ""
+        if hasattr(self, "all_search"):
+            query = self.all_search.text().strip()
+        if query:
+            items = [i for i in self.history if query.lower() in i.get('content', '').lower()]
+        else:
+            items = list(self.history)
+        self._fill_list(self.all_list, self.all_empty, items, "all")
+        if not items and query:
+            labels = self.all_empty.findChildren(QLabel)
+            if len(labels) >= 2:
+                labels[0].setText("No matches")
+                labels[1].setText(f"Nothing found for “{query}”")
+        elif not query:
+            labels = self.all_empty.findChildren(QLabel)
+            if len(labels) >= 2:
+                labels[0].setText("No clipboard history")
+                labels[1].setText("Copy something and it will appear here automatically")
         self.update_stats()
 
     def populate_favorites(self):
-        self.fav_list.clear()
         fav_items = [i for i in self.history if i.get('favorite', False)]
-        for idx, item in enumerate(fav_items, 1):
-            self.add_item_widget(self.fav_list, item, idx)
-        self._set_list_empty(self.fav_list, self.fav_empty, len(fav_items))
+        self._fill_list(self.fav_list, self.fav_empty, fav_items, "fav")
 
     def populate_today(self):
-        self.today_list.clear()
         today = date.today()
         today_items = []
         for i in self.history:
@@ -1685,62 +1755,44 @@ class ClipboardManager(QMainWindow):
                     today_items.append(i)
             except Exception:
                 pass
-        for idx, item in enumerate(today_items, 1):
-            self.add_item_widget(self.today_list, item, idx)
-        self._set_list_empty(self.today_list, self.today_empty, len(today_items))
+        self._fill_list(self.today_list, self.today_empty, today_items, "today")
 
     def on_date_selected(self, qdate):
-        selected = qdate.toPyDate()
-        self.date_title.setText(selected.strftime("%A, %b %d %Y"))
-        self.date_list.clear()
+        # Debounce rapid calendar clicks so the UI stays responsive
+        self._pending_date = qdate.toPyDate()
+        self.date_title.setText(self._pending_date.strftime("%A, %b %d %Y"))
+        self._date_timer.start(40)
+
+    def _apply_pending_date(self):
+        if self._pending_date is None:
+            return
+        self._fill_date_list(self._pending_date)
+
+    def _fill_date_list(self, selected):
+        query = ""
+        if hasattr(self, "date_search"):
+            query = self.date_search.text().strip().lower()
         date_items = []
         for i in self.history:
             try:
-                if datetime.fromisoformat(i.get('timestamp', '')).date() == selected:
-                    date_items.append(i)
+                if datetime.fromisoformat(i.get('timestamp', '')).date() != selected:
+                    continue
+                content = i.get('content', '')
+                if query and query not in content.lower():
+                    continue
+                date_items.append(i)
             except Exception:
                 pass
-        for idx, item in enumerate(date_items, 1):
-            self.add_item_widget(self.date_list, item, idx)
-        self._set_list_empty(self.date_list, self.date_empty, len(date_items))
+        self._fill_list(self.date_list, self.date_empty, date_items, "date")
 
     def filter_all_tab(self, text):
-        self.all_list.clear()
-        if not text:
-            self.populate_all_items()
-            labels = self.all_empty.findChildren(QLabel)
-            if len(labels) >= 2:
-                labels[0].setText("No clipboard history")
-                labels[1].setText("Copy something and it will appear here automatically")
-            return
-        filtered = [i for i in self.history if text.lower() in i.get('content', '').lower()]
-        for idx, item in enumerate(filtered, 1):
-            self.add_item_widget(self.all_list, item, idx)
-        if filtered:
-            self.all_list.show()
-            self.all_empty.hide()
-        else:
-            self.all_list.hide()
-            self.all_empty.show()
-            labels = self.all_empty.findChildren(QLabel)
-            if len(labels) >= 2:
-                labels[0].setText("No matches")
-                labels[1].setText(f"Nothing found for “{text}”")
+        self._dirty["all"] = True
+        self.populate_all_items()
 
     def filter_date_tab(self, text):
         selected = self.calendar.selectedDate().toPyDate()
-        self.date_list.clear()
-        date_items = []
-        for i in self.history:
-            try:
-                if datetime.fromisoformat(i.get('timestamp', '')).date() == selected:
-                    if not text or text.lower() in i.get('content', '').lower():
-                        date_items.append(i)
-            except Exception:
-                pass
-        for idx, item in enumerate(date_items, 1):
-            self.add_item_widget(self.date_list, item, idx)
-        self._set_list_empty(self.date_list, self.date_empty, len(date_items))
+        self._pending_date = selected
+        self._fill_date_list(selected)
 
     def toggle_select(self, content, state):
         if state == Qt.Checked:
@@ -1783,9 +1835,9 @@ class ClipboardManager(QMainWindow):
                     item['content'] = viewer.edited_content
                     break
             self.save_data()
-            self.populate_all_items()
-            self.populate_favorites()
-            self.populate_today()
+            self.mark_lists_dirty()
+            self.refresh_visible_list()
+            self.update_stats()
             self.toast.show_message("Saved changes", "success")
 
     def quick_delete(self, content):
@@ -1796,10 +1848,10 @@ class ClipboardManager(QMainWindow):
         if reply == QMessageBox.Yes:
             self.history = [i for i in self.history if i.get('content') != content]
             self.save_data()
-            self.populate_all_items()
-            self.populate_favorites()
-            self.populate_today()
             self.selected_items.discard(content)
+            self.mark_lists_dirty()
+            self.refresh_visible_list()
+            self.update_stats()
             self.toast.show_message("Deleted", "success")
 
     def quick_favorite(self, content):
@@ -1811,9 +1863,9 @@ class ClipboardManager(QMainWindow):
         else:
             return
         self.save_data()
-        self.populate_all_items()
-        self.populate_favorites()
-        self.populate_today()
+        self.mark_lists_dirty()
+        self.refresh_visible_list()
+        self.update_stats()
         self.toast.show_message("Favorited" if starred else "Removed from favorites", "success")
 
     def copy_selected_items(self):
@@ -1859,10 +1911,12 @@ class ClipboardManager(QMainWindow):
             self.history = []
             self.selected_items.clear()
             self.save_data()
-            self.populate_all_items()
-            self.populate_favorites()
-            self.populate_today()
-            self.date_list.clear()
+            self.mark_lists_dirty()
+            self.refresh_visible_list()
+            if hasattr(self, "date_list"):
+                self.date_list.clear()
+                self._set_list_empty(self.date_list, self.date_empty, 0)
+            self.update_stats()
             self.toast.show_message("History cleared", "success")
 
     def closeEvent(self, event):
@@ -1874,12 +1928,21 @@ def main():
     # Better font rendering on Linux
     os.environ.setdefault("QT_AUTO_SCREEN_SCALE_FACTOR", "1")
     app = QApplication(sys.argv)
-    app.setApplicationName(f"{APP_NAME} v{APP_VERSION}")
+    # Application name MUST match StartupWMClass for the taskbar icon
+    app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_NAME)
+    app.setApplicationVersion(APP_VERSION)
+    # Lets GNOME/KDE map this window to klippboard.desktop
+    if hasattr(app, "setDesktopFileName"):
+        app.setDesktopFileName(DESKTOP_FILE_ID)
     app.setQuitOnLastWindowClosed(False)
     app.setStyle("Fusion")
-    if ICON_PATH:
-        app.setWindowIcon(QIcon(ICON_PATH))
+
+    global APP_ICON
+    APP_ICON = load_app_icon()
+    if not APP_ICON.isNull():
+        app.setWindowIcon(APP_ICON)
+
     # App-level stylesheet so every dialog (QMessageBox / QInputDialog) is styled
     app.setStyleSheet(global_stylesheet())
 

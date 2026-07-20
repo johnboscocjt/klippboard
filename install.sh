@@ -41,17 +41,34 @@ echo "📄 Copying application..."
 cp "$APP_SRC" ~/clipboard_manager.py
 chmod +x ~/clipboard_manager.py
 
-# Install icon so the launcher and window can use it
-ICON_DEST="$HOME/.local/share/icons/klippboard.png"
+# Install icon so the launcher, window, and taskbar can use it
 if [ -n "$ICON_SRC" ]; then
     echo "🎨 Installing app icon..."
     mkdir -p "$HOME/.local/share/icons"
-    cp "$ICON_SRC" "$ICON_DEST"
-    # Also drop a copy next to the app so it is always found at runtime
+    cp "$ICON_SRC" "$HOME/.local/share/icons/klippboard.png"
+    # Next to the installed app (runtime lookup)
     cp "$ICON_SRC" ~/klippboard.png
+
+    # Freedesktop hicolor theme — required for reliable taskbar / dock icons
+    python3 - "$ICON_SRC" <<'PY'
+import os, sys
+from PyQt5.QtGui import QImage
+from PyQt5.QtCore import Qt
+
+src = sys.argv[1]
+img = QImage(src)
+home = os.path.expanduser("~")
+for size in (16, 24, 32, 48, 64, 128, 256, 512):
+    folder = os.path.join(home, ".local/share/icons/hicolor", f"{size}x{size}", "apps")
+    os.makedirs(folder, exist_ok=True)
+    scaled = img.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    scaled.save(os.path.join(folder, "klippboard.png"), "PNG")
+print("hicolor icons installed")
+PY
+    ICON_NAME="klippboard"
 else
     echo "⚠️  Icon file not found; using a fallback icon."
-    ICON_DEST="klippboard"
+    ICON_NAME="utilities-terminal"
 fi
 
 # Create global command wrapper
@@ -59,7 +76,9 @@ echo "🌐 Setting up global command..."
 sudo tee /usr/local/bin/klippboard > /dev/null << 'EOF'
 #!/bin/bash
 source ~/clipboard_env/bin/activate
-python3 ~/clipboard_manager.py
+# Ensure Qt can resolve the desktop file / icon association
+export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-}"
+exec python3 ~/clipboard_manager.py
 EOF
 sudo chmod +x /usr/local/bin/klippboard
 
@@ -72,7 +91,7 @@ if [ -f ~/.bashrc ]; then
     fi
 fi
 
-# Create desktop shortcut with the app icon
+# Create desktop shortcut with the theme icon name (matches WM class)
 echo "🎯 Creating desktop shortcut..."
 mkdir -p ~/.local/share/applications
 cat > ~/.local/share/applications/klippboard.desktop << DESKTOP
@@ -83,7 +102,7 @@ Name=KlippBoard
 GenericName=Clipboard Manager
 Comment=Modern, local clipboard manager for Linux
 Exec=/usr/local/bin/klippboard
-Icon=$ICON_DEST
+Icon=$ICON_NAME
 Terminal=false
 Categories=Utility;Accessories;
 Keywords=clipboard;manager;history;copy;paste;
@@ -92,9 +111,11 @@ StartupWMClass=KlippBoard
 DESKTOP
 chmod +x ~/.local/share/applications/klippboard.desktop
 
-# Refresh desktop + icon caches so it appears immediately
+# Refresh desktop + icon caches so the taskbar picks up the icon
 update-desktop-database ~/.local/share/applications 2>/dev/null || true
-gtk-update-icon-cache ~/.local/share/icons 2>/dev/null || true
+gtk-update-icon-cache -f -t ~/.local/share/icons/hicolor 2>/dev/null || true
+gtk-update-icon-cache -f -t ~/.local/share/icons 2>/dev/null || true
+xdg-desktop-menu forceupdate 2>/dev/null || true
 
 echo ""
 echo "✅ Installation Complete!"
