@@ -7,6 +7,36 @@
 [![Python 3.7+](https://img.shields.io/badge/Python-3.7%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Screenshots
+
+**All** — every copy lands here automatically. Search, select, star, or open any clip.
+
+![All clipboard history](clipboardpictures/all.png)
+
+**Favorites** — clips you starred, kept one click away.
+
+![Favorites tab](clipboardpictures/favorites.png)
+
+**Today** — only what you copied today.
+
+![Today tab](clipboardpictures/today.png)
+
+**Calendar** — pick a date on the left; that day’s clips appear on the right.
+
+![Calendar browse](clipboardpictures/calendar.png)
+
+**Viewer** — full editor with line numbers, character count, save, and copy.
+
+![Clipboard item viewer](clipboardpictures/viewer.png)
+
+**Env Manager** — store and sync `.env` files (New File, Push / Pull, Set Repo).
+
+![Env Manager](clipboardpictures/env-manager.png)
+
+**Help** — built-in guide covering tabs, actions, shortcuts, and privacy.
+
+![Help documentation](clipboardpictures/help.png)
+
 ## Key Features
 
 ### Clipboard Management
@@ -109,6 +139,7 @@ bash uninstall.sh --purge  # also delete history + env files
 
 - `clipboard_manager.py` — main application
 - `klippboard.png` — app / launcher / tray icon
+- `clipboardpictures/` — screenshots used in this README
 - `install.sh` — installer
 - `uninstall.sh` — uninstaller (`--purge` to remove data)
 - `INSTALLATION.md` — setup + keyboard shortcut guide
