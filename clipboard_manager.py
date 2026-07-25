@@ -9,6 +9,7 @@ import os
 import json
 import time
 import subprocess
+import unicodedata
 from datetime import datetime, date
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -19,7 +20,9 @@ from PyQt5.QtWidgets import (
     QButtonGroup
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QSize, QDate, QRect, QTimer
-from PyQt5.QtGui import QFont, QColor, QPainter, QTextFormat, QIcon, QPixmap
+from PyQt5.QtGui import (
+    QFont, QColor, QPainter, QTextFormat, QIcon, QPixmap, QFontDatabase
+)
 
 APP_VERSION = "1.0.0"
 APP_NAME = "KlippBoard"
@@ -95,6 +98,126 @@ THEME = {
 ENV_DIR = os.path.expanduser("~/.klippboard_env")
 ENV_CONFIG = os.path.expanduser("~/.klippboard_env_config.json")
 
+# ---------------------------------------------------------------------------
+# Emoji support
+#
+# The UI fonts below carry no emoji glyphs, and Qt will not reach for the
+# system emoji font on its own -- copied emoji land in the history as empty
+# tofu boxes. Naming an emoji family explicitly in every font stack fixes it.
+# ---------------------------------------------------------------------------
+EMOJI_FONT_CANDIDATES = (
+    "Noto Color Emoji",       # most Linux distros
+    "Apple Color Emoji",      # macOS
+    "Segoe UI Emoji",         # Windows
+    "Twemoji Mozilla",
+    "JoyPixels",
+    "EmojiOne Color",
+    "Symbola",                # monochrome last resort
+)
+
+GENERIC_FONT_FAMILIES = ("sans-serif", "serif", "monospace", "cursive", "fantasy")
+
+_emoji_font = None
+
+
+def emoji_font_family():
+    """First emoji-capable font actually installed, or "" if none is."""
+    global _emoji_font
+    if _emoji_font is None:
+        try:
+            installed = set(QFontDatabase().families())
+        except Exception:
+            installed = set()
+        if not installed:
+            # No QApplication yet -- don't cache, the font list isn't real.
+            return ""
+        _emoji_font = next(
+            (f for f in EMOJI_FONT_CANDIDATES if f in installed), ""
+        )
+    return _emoji_font
+
+
+def font_stack(*families):
+    """Build a CSS font-family list with the system emoji font mixed in.
+
+    The emoji family goes just before the generic fallback so real text keeps
+    using the UI font and only missing glyphs fall through to emoji.
+    """
+    stack = list(families)
+    emoji = emoji_font_family()
+    if emoji and emoji not in stack:
+        if stack and stack[-1] in GENERIC_FONT_FAMILIES:
+            stack.insert(len(stack) - 1, emoji)
+        else:
+            stack.append(emoji)
+    return ", ".join(
+        f if f in GENERIC_FONT_FAMILIES else f"'{f}'" for f in stack
+    )
+
+
+def ui_font_stack():
+    return font_stack("Inter", "Segoe UI", "Ubuntu", "sans-serif")
+
+
+def mono_font_stack():
+    return font_stack("JetBrains Mono", "monospace")
+
+
+def with_emoji_fallback(font):
+    """Let a QFont fall back to the emoji font for glyphs it doesn't have."""
+    emoji = emoji_font_family()
+    if emoji and hasattr(font, "setFamilies"):  # setFamilies() needs Qt 5.13+
+        font.setFamilies([font.family(), emoji])
+    return font
+
+
+# Codepoints that bind to the character before them. Cutting a preview
+# directly in front of one of these strands it and renders as a stray box.
+_ZWJ = "‍"
+_KEYCAP = "⃣"
+
+
+def _joins_previous(ch):
+    cp = ord(ch)
+    return (
+        ch in (_ZWJ, _KEYCAP)
+        or 0xFE00 <= cp <= 0xFE0F          # variation selectors
+        or 0x1F3FB <= cp <= 0x1F3FF        # skin tone modifiers
+        or 0xE0020 <= cp <= 0xE007F        # tag characters (subdivision flags)
+        or unicodedata.category(ch) in ("Mn", "Mc", "Me")
+    )
+
+
+def _is_regional_indicator(ch):
+    return 0x1F1E6 <= ord(ch) <= 0x1F1FF
+
+
+def truncate_preview(text, limit):
+    """Cut text to ~limit chars without splitting an emoji or accent sequence.
+
+    Returns (shortened_text, was_truncated).
+    """
+    if len(text) <= limit:
+        return text, False
+
+    cut = limit
+    # Don't strand a combining mark, skin tone or variation selector.
+    while cut > 0 and _joins_previous(text[cut]):
+        cut -= 1
+    # A ZWJ before the cut means the sequence continues past it -- drop it all.
+    while cut > 0 and text[cut - 1] == _ZWJ:
+        cut -= 1
+        while cut > 0 and _joins_previous(text[cut]):
+            cut -= 1
+    # Flags are pairs of regional indicators; never keep half of one.
+    run = 0
+    while run < cut and _is_regional_indicator(text[cut - 1 - run]):
+        run += 1
+    if run % 2:
+        cut -= 1
+
+    return text[:cut], True
+
 
 def global_stylesheet():
     t = THEME
@@ -105,7 +228,7 @@ def global_stylesheet():
         }}
         QWidget {{
             color: {t['text_primary']};
-            font-family: 'Inter', 'Segoe UI', 'Ubuntu', sans-serif;
+            font-family: {ui_font_stack()};
             font-size: 13px;
         }}
         QToolTip {{
@@ -410,7 +533,7 @@ class CodeEditor(QPlainTextEdit):
 
         mono = QFont("JetBrains Mono", 12)
         mono.setStyleHint(QFont.Monospace)
-        self.setFont(mono)
+        self.setFont(with_emoji_fallback(mono))
         self.setStyleSheet(f"""
             QPlainTextEdit {{
                 background: {THEME['bg_input']};
@@ -781,7 +904,7 @@ class EnvDialog(QDialog):
 
         os.makedirs(ENV_DIR, exist_ok=True)
         file_path = os.path.join(ENV_DIR, name)
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             f.write(initial_content)
 
         if 'files' not in self.config:
@@ -863,23 +986,23 @@ class EnvDialog(QDialog):
 
     def view_env_file(self, filename):
         path = os.path.join(ENV_DIR, filename)
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         ViewerDialog(content, self, title=filename).exec_()
 
     def edit_env_file(self, filename):
         path = os.path.join(ENV_DIR, filename)
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         dlg = ViewerDialog(content, self, title=f"Edit · {filename}")
         if dlg.exec_() == QDialog.Accepted:
-            with open(path, 'w') as f:
+            with open(path, 'w', encoding='utf-8') as f:
                 f.write(dlg.edited_content)
             self.toast.show_message(f"Saved {filename}", "success")
 
     def copy_env_file(self, filename):
         path = os.path.join(ENV_DIR, filename)
-        with open(path, 'r') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         QApplication.clipboard().setText(content)
         self.toast.show_message(f"Copied {filename}", "success")
@@ -1006,8 +1129,9 @@ class ListItemWidget(QWidget):
         col.setSpacing(4)
         col.setContentsMargins(0, 0, 0, 0)
 
-        preview = content[:140].replace('\n', ' ').strip()
-        if len(content) > 140:
+        preview, truncated = truncate_preview(content, 140)
+        preview = preview.replace('\n', ' ').strip()
+        if truncated:
             preview += "…"
         self.content_label = QLabel(preview)
         self.content_label.setWordWrap(True)
@@ -1432,7 +1556,7 @@ class ClipboardManager(QMainWindow):
         <style>
             body {{
                 color: {THEME['text_primary']};
-                font-family: Inter, Segoe UI, Ubuntu, sans-serif;
+                font-family: {ui_font_stack()};
                 font-size: 14px;
                 line-height: 1.6;
                 background: transparent;
@@ -1458,7 +1582,7 @@ class ClipboardManager(QMainWindow):
                 color: {THEME['accent_hover']};
                 padding: 2px 7px;
                 border-radius: 5px;
-                font-family: 'JetBrains Mono', monospace;
+                font-family: {mono_font_stack()};
                 font-size: 12px;
             }}
             a {{ color: {THEME['accent_hover']}; text-decoration: none; }}
@@ -1637,21 +1761,21 @@ class ClipboardManager(QMainWindow):
     def load_data(self):
         try:
             if os.path.exists(self.history_file):
-                with open(self.history_file, 'r') as f:
+                with open(self.history_file, 'r', encoding='utf-8') as f:
                     self.history = json.load(f)
         except Exception:
             self.history = []
         try:
             if os.path.exists(self.config_file):
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file, 'r', encoding='utf-8') as f:
                     json.load(f)
         except Exception:
             pass
 
     def save_data(self):
-        with open(self.history_file, 'w') as f:
-            json.dump(self.history[:self.max_items], f, indent=2)
-        with open(self.config_file, 'w') as f:
+        with open(self.history_file, 'w', encoding='utf-8') as f:
+            json.dump(self.history[:self.max_items], f, indent=2, ensure_ascii=False)
+        with open(self.config_file, 'w', encoding='utf-8') as f:
             json.dump({}, f)
 
     def setup_monitoring(self):
@@ -1884,7 +2008,7 @@ class ClipboardManager(QMainWindow):
             return
         filename = f"{os.path.expanduser('~')}/clipboard_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         try:
-            with open(filename, 'w') as f:
+            with open(filename, 'w', encoding='utf-8') as f:
                 for i, item in enumerate(self.history, 1):
                     f.write(f"[{i}] {item.get('timestamp', 'N/A')}\n")
                     f.write(f"{item.get('content', '')}\n")
