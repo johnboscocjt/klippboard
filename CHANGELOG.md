@@ -1,5 +1,21 @@
 # 📝 Changelog
 
+## Unreleased
+
+### 😀 Emoji support
+- **Emoji now render properly** - copied emoji showed up as empty boxes (tofu)
+  because the UI font stack named no emoji family and Qt would not reach for
+  the system emoji font by itself. Every font stack now includes the first
+  emoji font actually installed (Noto Color Emoji / Apple Color Emoji /
+  Segoe UI Emoji / …), detected at runtime.
+- **Previews no longer split emoji** - truncating an item at 140 characters
+  could cut through a multi-codepoint sequence (family, skin tone, flag,
+  accent) and leave a stray box. Previews now cut on sequence boundaries.
+- **UTF-8 for all file I/O** - history, env files and `Export History` used the
+  locale's default encoding. On a non-UTF-8 locale that makes `Export History`
+  fail with `UnicodeEncodeError` as soon as any item contains an emoji, and
+  makes env files unreadable. All of them now specify `encoding='utf-8'`.
+
 ## v1.0.0 - Release (2026)
 
 ### ✨ Full Featured Release
